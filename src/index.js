@@ -1,14 +1,24 @@
 import express from 'express';
 import path from 'path';
+import mongoos from 'mongoose';
+import auth  from './routes/auth';
+import signup from './routes/signup';
+import users from './routes/users';
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
+mongoos.connect(process.env.MONGODB_URL, {useNewUrlParser:true});
+app.use(bodyParser.json({ type: 'application/json' }))
 
-app.post('/api/auth', (req, res) => {
-    res.status(400).json({errors : { global : "Invalid credentials"}});
-})
+app.use('/api/login', auth);
+app.use('/api/signup', signup);
+app.use('/api', users);
 
-app.get("/*", (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-})
+app.get("/", (req, res) => {
+    res.json({success : true});
+});
 
-app.listen(8888, () => console.log("running on local host 8080"));
+app.listen(9000, () => console.log("running on localhost 9000"));

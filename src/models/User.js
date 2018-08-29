@@ -1,4 +1,4 @@
-import mongoose, {mongo} from 'mongoose';
+import mongoose from 'mongoose';
 import BC from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import uniqueValidator  from 'mongoose-unique-validator';
@@ -42,6 +42,16 @@ schema.methods.generateJWT = function generateJWT() {
     );
 }
 
+schema.methods.generateResetPasswordToken = function generateResetPasswordToken() {
+    return jwt.sign(
+        {
+            _id : this._id
+        },
+        process.env.JWT_SECRET_KEY,
+        {expiresIn : "15min"}
+    )
+}
+
 schema.methods.isValidPassword = function isValidPassword(password) {
     return BC.compareSync(password.toString(), this.passwordHash)
 };
@@ -57,5 +67,9 @@ schema.methods.toAuthJSON = function toAuthJSON() {
 schema.methods.setPassword = function setPassword(password) {
     this.passwordHash = BC.hashSync(password, 10);
 }
+
+schema.methods.generateResetPasswordLink = function generateResetPasswordLink() {
+    return `${process.env.HOST}/reset_password/${this.generateResetPasswordToken}`
+} 
 
 export default mongoose.model('User', schema);

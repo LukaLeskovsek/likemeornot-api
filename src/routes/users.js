@@ -51,8 +51,49 @@ async function chkLikesByUserId(likedUserId, likerId) {
         });
 }
 
+async function getLikeIdByUserId(userId){
+    return Likes.find({userid : userId})
+        .then(l => l[0]._id);
+}
+
 router.post('/user/:id/like', async (req, res) => {
-    console.log('Liked by user :', req.body.likedByUserEmail);
+    
+    if(!!auth(req.headers.authorization)){
+        console.log('unathorized!!!!!');
+        res.status(401).json({errors : {global : "Invalid credentials"}});
+        return;
+    }
+
+    let user_id = '';
+    await getUserIdByEmail(req.body.likedByUserEmail).then(uid => user_id = uid);
+    
+    if(user_id === ''){
+        res.status(401).json({errors : {global : "No Authorization"}});
+        return;
+    }
+    
+    let likeId = '';
+    await getLikeIdByUserId(req.params.id).then(id => likeId = id);
+ 
+    if(!!likeId) {
+        res.status(400).json({errors : {global : "You did not like this person not even once!"}});
+        return;
+    };
+
+    await Likes.deleteOne({_id : likeId}).then(like => {
+        User.findOneAndUpdate({_id : req.params.id}, {$inc : { likes : -1}})
+        .then( (usr) =>{
+            if(usr) {
+                res.status(200).json({});
+            }            
+        }).catch(err => {
+            console.log('Like save error : ', err);
+            res.status(404).json({errors : {global : err}});   
+        })  
+    });  
+});
+
+router.post('/user/:id/unlike', async (req, res) => {
     
     if(!!auth(req.headers.authorization)){
         console.log('unathorized!!!!!');
@@ -72,7 +113,7 @@ router.post('/user/:id/like', async (req, res) => {
     await chkLikesByUserId(req.params.id, user_id).then(liked => userAlreadyLiked = liked);
  
     if(userAlreadyLiked) {
-        res.json({errors : {global : "You can only like one person once!"}});
+        res.status(400).json({errors : {global : "You can only like one person once!"}});
         return;
     };
 
@@ -93,5 +134,6 @@ router.post('/user/:id/like', async (req, res) => {
             })
     })    
 });
+
 
 export default router;

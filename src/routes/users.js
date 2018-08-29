@@ -2,6 +2,7 @@ import express from 'express';
 import User from '../models/User';
 import Likes from '../models/Likes';
 import auth from '../utils/authCheck';
+import { runInNewContext } from 'vm';
 
 
 const router = express.Router();
@@ -31,40 +32,66 @@ router.get('/user/:id', (req, res) => {
         })
 });
 
-router.post('/user/:id/like', (req, res) => {
-    console.log('Liked by user :', req.body.likedByUserEmail);
-   
-    User.findOne({email : req.body.likedByUserEmail}).then(liker => {
-        console.log('-------------------------------------');
-        console.log('Liker : ', liker);
-        let chkLike = Likes.findOne({userid : req.params.id, likedby : liker._id}).then(res => {
-            res.status(400).json({errors : { global : "You allready liked this user."}})
-        }).then(() => {
-            const newLike = {
-                userid : req.params.id,
-                likedby : liker._id
-            };
-            
-            new liker  = 
-
+async function getUserIdByEmail(userEmail){
+    return User.find({email : userEmail})
+        .then(user => {
+            console.log('----1111 ----- user id -----', user[0]._id);
+            return user[0]._id;
         });
+};
 
-        console.log('Chk like : ', chkLike);
+async function chkLikesByUserId(likedUserId, likerId) {
+    return Likes.find({userid : likedUserId, useridlikedby : likerId})
+        .then(l => {
+            if(l  && l.length > 0){
+                return true;
+            }else{
+                return false;
+            }
+        });
+}
+
+router.post('/user/:id/like', async (req, res) => {
+    console.log('Liked by user :', req.body.likedByUserEmail);
+    
+    if(!!auth(req.headers.authorization)){
+        console.log('unathorized!!!!!');
+        res.status(401).json({errors : {global : "Invalid credentials"}});
+        return;
+    }
+
+    let user_id = '';
+    await getUserIdByEmail(req.body.likedByUserEmail).then(uid => user_id = uid);
+    
+    if(user_id === ''){
+        res.status(401).json({errors : {global : "No Authorization"}});
+        return;
+    }
+    
+    let userAlreadyLiked = false;
+    await chkLikesByUserId(req.params.id, user_id).then(liked => userAlreadyLiked = liked);
+ 
+    if(userAlreadyLiked) {
+        res.json({errors : {global : "You can only like one person once!"}});
+        return;
+    };
+
+    const newLike  = new Likes({
+        userid : req.params.id,
+        useridlikedby : user_id
     });
-    
-    
-
-
-    User.findOneAndUpdate({_id : req.params.id}, {$inc : { likes : 1}})
-        .then(likedUser => {
-            res.status(200).json({});
-        })
-        .catch(err => {
-            console.log('ERRRIRRRRORRR : ', err);
-            res.status(404).json({errors : {global : "something went wrong"}});
-        })
-})
-
-
+                   
+    await newLike.save().then(like => {
+        User.findOneAndUpdate({_id : req.params.id}, {$inc : { likes : 1}})
+            .then( (usr) =>{
+                if(usr) {
+                    res.status(200).json({});
+                }            
+            }).catch(err => {
+                console.log('Like save error : ', err);
+                res.status(404).json({errors : {global : err}});   
+            })
+    })    
+});
 
 export default router;

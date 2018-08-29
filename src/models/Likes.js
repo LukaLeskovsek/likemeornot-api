@@ -1,4 +1,4 @@
-import mongoose, {mongo} from 'mongoose';
+import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
         userid: {
@@ -7,7 +7,7 @@ const schema = new mongoose.Schema({
             index: true,
             unique : true
         },
-        likedby: {
+        useridlikedby: {
             type: "string",
             required: true,
             index : true

@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User';
 import jwt from 'jsonwebtoken';
+import auth from '../utils/authCheck';
 import {sendResetPasswordEmail} from './../utils/mailer';
 
 const router = express.Router();
@@ -29,6 +30,9 @@ router.post('/me/reset-password', (req, res) =>{
             res.status(400).json({errorsr : {global : "Request denied!"}});
         }
     })
+    .catch(err => {
+        res.status(401).json({errors : {global : "Invalid credentials"}});
+    })
 });
 
 router.post('/me/validate-token', (req, res) =>{
@@ -41,5 +45,31 @@ router.post('/me/validate-token', (req, res) =>{
         }
     })
 });
+
+router.get('/me', (req,res) => {
+    if(!!auth(req.headers.authorization)){
+        console.log('unathorized!!!!!');
+        res.status(401).json({errors : {global : "Invalid credentials"}});
+        return;
+    }
+
+    const token = req.headers.authorization.split(" ")[1];
+
+    if (token) {
+        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+            User.findOne({email : decoded.email})
+            .then( (user) => {
+                if(user && user.isValidPassword(credentials.password)){ 
+                    res.json({user : user.toAuthJSON()});
+                }else{
+                    res.status(401).json({errors : {global : "Invalid credentials"}});
+                }    
+            })
+            .catch(err => {
+                res.status(401).json({errors : {global : "Invalid credentials"}});
+            })
+        })
+    };
+})
 
 export default router;

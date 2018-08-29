@@ -21,4 +21,4 @@ app.get("/", (req, res) => {
     res.json({success : true});
 });
 
-app.listen(9000, () => console.log("running on localhost 9000"));
+module.exports = app.listen(9000, () => console.log("running on localhost 9000"));

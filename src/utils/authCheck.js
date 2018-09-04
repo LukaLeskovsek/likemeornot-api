@@ -1,20 +1,21 @@
 import jwt from "jsonwebtoken";
 
-export default (authHeader) => {  
+export function isAuthenticated(req, res, next) {
+  if(!req.headers.authorization) {
+    res.status(401).json({errors : {global : "Invalid credentials/missing token"}});
+  }
   
-  if(!!authHeader) return false;
-
-  const token = authHeader.split(" ")[1];
+  const token = req.headers.authorization.split(" ")[1];
 
   if (token) {
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
       if (err) {
-        return true;
+        res.status(401).json({errors : {global : `Credentials check error : ${err}`}});
       } else {
-        return true;
+        next();
       }
     });
   } else {
-    return false;
+    res.status(401).json({errors : {global : "Invalid credentials"}});
   }
-};
+}

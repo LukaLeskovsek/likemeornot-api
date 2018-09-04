@@ -1,17 +1,11 @@
 import express from 'express';
 import User from '../models/User';
 import Likes from '../models/Likes';
-import auth from '../utils/authCheck';
-
+import {isAuthenticated} from '../utils/authCheck';
 
 const router = express.Router();
 
-router.get('/most-liked', (req, res) => {    
-    if(!!auth(req.headers.authorization)){
-        console.log('unathorized!!!!!');
-        res.status(401).json({errors : {global : "Invalid credentials"}});
-    }
-
+router.get('/most-liked', isAuthenticated, (req, res) => {    
     User.find({}, {passwordHash : 0}).sort({likes : -1})
         .then( (users) => {            
             res.json({userList : users});                
@@ -22,7 +16,7 @@ router.get('/most-liked', (req, res) => {
 });
     
 router.get('/user/:id', (req, res) => {
-    User.findOne({_id : req.params.id})
+    User.find({_id : req.params.id},{passwordHash : 0})
         .then(user => {
             res.json({userDetails : user});
         })
@@ -66,14 +60,7 @@ async function getLikeIdByUserId(userId){
         .catch(err => { console.log('Error getting like id',err); return ''});
 }
 
-router.post('/user/:id/like', async (req, res) => {
-    
-    if(!!auth(req.headers.authorization)){
-        console.log('unathorized!!!!!');
-        res.status(401).json({errors : {global : "Invalid credentials"}});
-        return;
-    }
-
+router.post('/user/:id/like', isAuthenticated, async (req, res) => {
     let user_id = '';
     await getUserIdByEmail(req.body.likedByUserEmail).then(uid => user_id = uid);
     
@@ -109,14 +96,7 @@ router.post('/user/:id/like', async (req, res) => {
     
 });
 
-router.post('/user/:id/unlike', async (req, res) => {
-    
-    if(!!auth(req.headers.authorization)){
-        console.log('unathorized!!!!!');
-        res.status(401).json({errors : {global : "Invalid credentials"}});
-        return;
-    }
-
+router.post('/user/:id/unlike', isAuthenticated, async (req, res) => {
     let user_id = '';
     await getUserIdByEmail(req.body.likedByUserEmail).then(uid => user_id = uid);
     
@@ -128,7 +108,7 @@ router.post('/user/:id/unlike', async (req, res) => {
     let likeId = '';
     await getLikeIdByUserId(req.params.id).then(id => likeId = id);
  
-    if(!!likeId) {
+    if(!likeId) {
         res.status(400).json({errors : {global : "You did not like this person not even once!"}});
         return;
     };
@@ -143,10 +123,7 @@ router.post('/user/:id/unlike', async (req, res) => {
             console.log('Like save error : ', err);
             res.status(404).json({errors : {global : err}});   
         })  
-    });  
-
-       
+    });         
 });
-
 
 export default router;

@@ -1,7 +1,7 @@
 import express from 'express';
 import User from '../models/User';
 import jwt from 'jsonwebtoken';
-import auth from '../utils/authCheck';
+import {isAuthenticated} from '../utils/authCheck';
 import {sendResetPasswordEmail} from './../utils/mailer';
 
 const router = express.Router();
@@ -36,7 +36,7 @@ router.post('/me/reset-password', (req, res) =>{
 });
 
 router.post('/me/validate-token', (req, res) =>{
-    jwt.verify(req.body.token, process.env.JWT_SECRET, (err) => {
+    jwt.verify(req.body.token, process.env.JWT_SECRET_KEY, (err) => {
         if(err){
             res.status(400).json({errors : {global : "Error verifying token"}});
         }
@@ -46,17 +46,10 @@ router.post('/me/validate-token', (req, res) =>{
     })
 });
 
-router.get('/me', (req,res) => {
-    if(!!auth(req.headers.authorization)){
-        console.log('unathorized!!!!!');
-        res.status(401).json({errors : {global : "Invalid credentials"}});
-        return;
-    }
-
+router.get('/me',  isAuthenticated, (req,res) => {
     const token = req.headers.authorization.split(" ")[1];
-
     if (token) {
-        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        jwt.verify(token, process.env.JWT_SECRET_KEY, (err, decoded) => {
             User.findOne({email : decoded.email})
             .then( (user) => {
                 if(user && user.isValidPassword(credentials.password)){ 

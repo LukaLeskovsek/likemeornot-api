@@ -13,7 +13,6 @@ router.post('/', (req, res) => {
         'bio' : bio.toString(),
         'likes' : 0
     });
-
     
     User.findOne({email : email.toString()}, (err, result) =>{
         if(err){

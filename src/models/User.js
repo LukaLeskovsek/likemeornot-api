@@ -36,7 +36,8 @@ schema.plugin(uniqueValidator);
 schema.methods.generateJWT = function generateJWT() {
     return jwt.sign(
         {
-            email : this.email
+            email : this.email,
+            id : this._id
         },
         process.env.JWT_SECRET_KEY
     );
